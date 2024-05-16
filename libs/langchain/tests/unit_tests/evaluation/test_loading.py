@@ -2,8 +2,8 @@
 from typing import List
 
 import pytest
+from langchain_core.embeddings import FakeEmbeddings
 
-from langchain.embeddings.fake import FakeEmbeddings
 from langchain.evaluation.loading import EvaluatorType, load_evaluators
 from langchain.evaluation.schema import PairwiseStringEvaluator, StringEvaluator
 from tests.unit_tests.llms.fake_chat_model import FakeChatModel
@@ -26,6 +26,7 @@ def test_load_evaluators(evaluator_type: EvaluatorType) -> None:
     )
 
 
+@pytest.mark.community
 @pytest.mark.parametrize(
     "evaluator_types",
     [

@@ -18,20 +18,25 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SummaryConfig:
-    """
+    """Configuration for summary generation.
+
     is_enabled: True if summary is enabled, False otherwise
     max_results: maximum number of results to summarize
     response_lang: requested language for the summary
+    prompt_name: name of the prompt to use for summarization
+      (see https://docs.vectara.com/docs/learn/grounded-generation/select-a-summarizer)
     """
 
     is_enabled: bool = False
     max_results: int = 7
     response_lang: str = "eng"
+    prompt_name: str = "vectara-summary-ext-v1.2.0"
 
 
 @dataclass
 class MMRConfig:
-    """
+    """Configuration for Maximal Marginal Relevance (MMR) search.
+
     is_enabled: True if MMR is enabled, False otherwise
     mmr_k: number of results to fetch for MMR, defaults to 50
     diversity_bias: number between 0 and 1 that determines the degree
@@ -50,7 +55,8 @@ class MMRConfig:
 
 @dataclass
 class VectaraQueryConfig:
-    """
+    """Configuration for Vectara query.
+
     k: Number of Documents to return. Defaults to 10.
     lambda_val: lexical match parameter for hybrid search.
     filter Dictionary of argument(s) to filter on metadata. For example a
@@ -83,7 +89,7 @@ class Vectara(VectorStore):
     Example:
         .. code-block:: python
 
-            from langchain.vectorstores import Vectara
+            from langchain_community.vectorstores import Vectara
 
             vectorstore = Vectara(
                 vectara_customer_id=vectara_customer_id,
@@ -305,7 +311,7 @@ class Vectara(VectorStore):
             self._delete_doc(doc_id)
             self._index_doc(doc)
         elif success_str == "E_NO_PERMISSIONS":
-            print(
+            print(  # noqa: T201
                 """No permissions to add document to Vectara. 
                 Check your corpus ID, customer ID and API key"""
             )
@@ -336,9 +342,11 @@ class Vectara(VectorStore):
                 {
                     "query": query,
                     "start": 0,
-                    "numResults": config.mmr_config.mmr_k
-                    if config.mmr_config.is_enabled
-                    else config.k,
+                    "numResults": (
+                        config.mmr_config.mmr_k
+                        if config.mmr_config.is_enabled
+                        else config.k
+                    ),
                     "contextConfig": {
                         "sentencesBefore": config.n_sentence_context,
                         "sentencesAfter": config.n_sentence_context,
@@ -364,6 +372,7 @@ class Vectara(VectorStore):
                 {
                     "maxSummarizedResults": config.summary_config.max_results,
                     "responseLang": config.summary_config.response_lang,
+                    "summarizerPromptName": config.summary_config.prompt_name,
                 }
             ]
 
@@ -380,7 +389,7 @@ class Vectara(VectorStore):
                 f"(code {response.status_code}, reason {response.reason}, details "
                 f"{response.text})",
             )
-            return [], ""
+            return [], ""  # type: ignore[return-value]
 
         result = response.json()
 
@@ -450,7 +459,7 @@ class Vectara(VectorStore):
         docs = self.vectara_query(query, config)
         return docs
 
-    def similarity_search(
+    def similarity_search(  # type: ignore[override]
         self,
         query: str,
         **kwargs: Any,
@@ -470,7 +479,7 @@ class Vectara(VectorStore):
         )
         return [doc for doc, _ in docs_and_scores]
 
-    def max_marginal_relevance_search(
+    def max_marginal_relevance_search(  # type: ignore[override]
         self,
         query: str,
         fetch_k: int = 50,
@@ -512,7 +521,7 @@ class Vectara(VectorStore):
         Example:
             .. code-block:: python
 
-                from langchain.vectorstores import Vectara
+                from langchain_community.vectorstores import Vectara
                 vectara = Vectara.from_texts(
                     texts,
                     vectara_customer_id=customer_id,
@@ -544,7 +553,7 @@ class Vectara(VectorStore):
         Example:
             .. code-block:: python
 
-                from langchain.vectorstores import Vectara
+                from langchain_community.vectorstores import Vectara
                 vectara = Vectara.from_files(
                     files_list,
                     vectara_customer_id=customer_id,
@@ -560,7 +569,7 @@ class Vectara(VectorStore):
 
 
 class VectaraRetriever(VectorStoreRetriever):
-    """Retriever class for `Vectara`."""
+    """Retriever for `Vectara`."""
 
     vectorstore: Vectara
     """Vectara vectorstore."""
@@ -570,6 +579,7 @@ class VectaraRetriever(VectorStoreRetriever):
             "k": 5,
             "filter": "",
             "n_sentence_context": "2",
+            "summary_config": SummaryConfig(),
         }
     )
 

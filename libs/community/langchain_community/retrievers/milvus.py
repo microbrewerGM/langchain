@@ -18,6 +18,7 @@ class MilvusRetriever(BaseRetriever):
 
     embedding_function: Embeddings
     collection_name: str = "LangChainCollection"
+    collection_properties: Optional[Dict[str, Any]] = None
     connection_args: Optional[Dict[str, Any]] = None
     consistency_level: str = "Session"
     search_params: Optional[dict] = None
@@ -31,6 +32,7 @@ class MilvusRetriever(BaseRetriever):
         values["store"] = Milvus(
             values["embedding_function"],
             values["collection_name"],
+            values["collection_properties"],
             values["connection_args"],
             values["consistency_level"],
         )
@@ -57,7 +59,7 @@ class MilvusRetriever(BaseRetriever):
         run_manager: CallbackManagerForRetrieverRun,
         **kwargs: Any,
     ) -> List[Document]:
-        return self.retriever.get_relevant_documents(
+        return self.retriever.invoke(
             query, run_manager=run_manager.get_child(), **kwargs
         )
 

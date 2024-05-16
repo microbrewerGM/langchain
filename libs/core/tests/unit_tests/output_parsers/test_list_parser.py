@@ -26,10 +26,29 @@ def test_single_item() -> None:
     assert list(parser.transform(iter([text]))) == [[a] for a in expected]
 
 
+def test_multiple_items_with_spaces() -> None:
+    """Test that a string with multiple comma-separated items
+    with spaces is parsed to a list."""
+    parser = CommaSeparatedListOutputParser()
+    text = "foo, bar, baz"
+    expected = ["foo", "bar", "baz"]
+
+    assert parser.parse(text) == expected
+    assert add(parser.transform(t for t in text)) == expected
+    assert list(parser.transform(t for t in text)) == [[a] for a in expected]
+    assert list(parser.transform(t for t in text.splitlines(keepends=True))) == [
+        [a] for a in expected
+    ]
+    assert list(
+        parser.transform(" " + t if i > 0 else t for i, t in enumerate(text.split(" ")))
+    ) == [[a] for a in expected]
+    assert list(parser.transform(iter([text]))) == [[a] for a in expected]
+
+
 def test_multiple_items() -> None:
     """Test that a string with multiple comma-separated items is parsed to a list."""
     parser = CommaSeparatedListOutputParser()
-    text = "foo, bar, baz"
+    text = "foo,bar,baz"
     expected = ["foo", "bar", "baz"]
 
     assert parser.parse(text) == expected
@@ -51,7 +70,7 @@ def test_numbered_list() -> None:
         "For example: \n\n1. foo\n\n2. bar\n\n3. baz"
     )
 
-    text2 = "Items:\n\n1. apple\n\n2. banana\n\n3. cherry"
+    text2 = "Items:\n\n1. apple\n\n    2. banana\n\n3. cherry"
 
     text3 = "No items in the list."
 
@@ -82,11 +101,11 @@ def test_numbered_list() -> None:
 def test_markdown_list() -> None:
     parser = MarkdownListOutputParser()
     text1 = (
-        "Your response should be a numbered list with each item on a new line."
+        "Your response should be a numbered - not a list item - list with each item on a new line."  # noqa: E501
         "For example: \n- foo\n- bar\n- baz"
     )
 
-    text2 = "Items:\n- apple\n- banana\n- cherry"
+    text2 = "Items:\n- apple\n     - banana\n- cherry"
 
     text3 = "No items in the list."
 

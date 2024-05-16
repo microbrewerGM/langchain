@@ -21,7 +21,7 @@ class GPT4All(LLM):
             model = GPT4All(model="./models/gpt4all-model.bin", n_threads=8)
 
             # Simplest invocation
-            response = model("Once upon a time, ")
+            response = model.invoke("Once upon a time, ")
     """
 
     model: str
@@ -111,6 +111,7 @@ class GPT4All(LLM):
             "n_batch",
             "repeat_penalty",
             "repeat_last_n",
+            "streaming",
         }
 
     def _default_params(self) -> Dict[str, Any]:
@@ -123,6 +124,7 @@ class GPT4All(LLM):
             "n_batch": self.n_batch,
             "repeat_penalty": self.repeat_penalty,
             "repeat_last_n": self.repeat_last_n,
+            "streaming": self.streaming,
         }
 
     @root_validator()
@@ -195,7 +197,7 @@ class GPT4All(LLM):
             .. code-block:: python
 
                 prompt = "Once upon a time, "
-                response = model(prompt, n_predict=55)
+                response = model.invoke(prompt, n_predict=55)
         """
         text_callback = None
         if run_manager:

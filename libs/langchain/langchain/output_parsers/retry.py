@@ -34,7 +34,7 @@ T = TypeVar("T")
 
 
 class RetryOutputParser(BaseOutputParser[T]):
-    """Wraps a parser and tries to fix parsing errors.
+    """Wrap a parser and try to fix parsing errors.
 
     Does this by passing the original prompt and the completion to another
     LLM, and telling it the completion did not satisfy criteria in the prompt.
@@ -56,7 +56,7 @@ class RetryOutputParser(BaseOutputParser[T]):
         prompt: BasePromptTemplate = NAIVE_RETRY_PROMPT,
         max_retries: int = 1,
     ) -> RetryOutputParser[T]:
-        """Create an OutputFixingParser from a language model and a parser.
+        """Create an RetryOutputParser from a language model and a parser.
 
         Args:
             llm: llm to use for fixing
@@ -138,7 +138,7 @@ class RetryOutputParser(BaseOutputParser[T]):
 
 
 class RetryWithErrorOutputParser(BaseOutputParser[T]):
-    """Wraps a parser and tries to fix parsing errors.
+    """Wrap a parser and try to fix parsing errors.
 
     Does this by passing the original prompt, the completion, AND the error
     that was raised to another language model and telling it that the completion

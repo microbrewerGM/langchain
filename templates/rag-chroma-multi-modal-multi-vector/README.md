@@ -9,7 +9,7 @@ It uses GPT-4V to create image summaries for each slide, embeds the summaries, a
  
 Given a question, relevat slides are retrieved and passed to GPT-4V for answer synthesis.
 
-![mm-captioning](https://github.com/langchain-ai/langchain/assets/122662504/5277ef6b-d637-43c7-8dc1-9b1567470503)
+![Diagram illustrating the multi-modal LLM process with a slide deck, captioning, storage, question input, and answer synthesis with year-over-year growth percentages.](https://github.com/langchain-ai/langchain/assets/122662504/5277ef6b-d637-43c7-8dc1-9b1567470503 "Multi-modal LLM Process Diagram")
 
 ## Input
 
@@ -99,7 +99,7 @@ add_routes(app, rag_chroma_multi_modal_chain_mv, path="/rag-chroma-multi-modal-m
 
 (Optional) Let's now configure LangSmith. 
 LangSmith will help us trace, monitor and debug LangChain applications. 
-LangSmith is currently in private beta, you can sign up [here](https://smith.langchain.com/). 
+You can sign up for LangSmith [here](https://smith.langchain.com/). 
 If you don't have access, you can skip this section
 
 ```shell

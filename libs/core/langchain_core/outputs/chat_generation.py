@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal
 from langchain_core.messages import BaseMessage, BaseMessageChunk
 from langchain_core.outputs.generation import Generation
 from langchain_core.pydantic_v1 import root_validator
+from langchain_core.utils._merge import merge_dicts
 
 
 class ChatGeneration(Generation):
@@ -22,7 +23,24 @@ class ChatGeneration(Generation):
     def set_text(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Set the text attribute to be the contents of the message."""
         try:
-            values["text"] = values["message"].content
+            text = ""
+            if isinstance(values["message"].content, str):
+                text = values["message"].content
+            # HACK: Assumes text in content blocks in OpenAI format.
+            # Uses first text block.
+            elif isinstance(values["message"].content, list):
+                for block in values["message"].content:
+                    if isinstance(block, str):
+                        text = block
+                        break
+                    elif isinstance(block, dict) and "text" in block:
+                        text = block["text"]
+                        break
+                    else:
+                        pass
+            else:
+                pass
+            values["text"] = text
         except (KeyError, AttributeError) as e:
             raise ValueError("Error while initializing ChatGeneration") from e
         return values
@@ -34,7 +52,7 @@ class ChatGeneration(Generation):
 
 
 class ChatGenerationChunk(ChatGeneration):
-    """A ChatGeneration chunk, which can be concatenated with other
+    """ChatGeneration chunk, which can be concatenated with other
       ChatGeneration chunks.
 
     Attributes:
@@ -53,14 +71,13 @@ class ChatGenerationChunk(ChatGeneration):
 
     def __add__(self, other: ChatGenerationChunk) -> ChatGenerationChunk:
         if isinstance(other, ChatGenerationChunk):
-            generation_info = (
-                {**(self.generation_info or {}), **(other.generation_info or {})}
-                if self.generation_info is not None or other.generation_info is not None
-                else None
+            generation_info = merge_dicts(
+                self.generation_info or {},
+                other.generation_info or {},
             )
             return ChatGenerationChunk(
                 message=self.message + other.message,
-                generation_info=generation_info,
+                generation_info=generation_info or None,
             )
         else:
             raise TypeError(

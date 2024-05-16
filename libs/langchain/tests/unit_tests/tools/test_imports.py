@@ -1,4 +1,4 @@
-from langchain.tools import __all__
+from langchain import tools
 
 EXPECTED_ALL = [
     "AINAppOps",
@@ -124,4 +124,4 @@ EXPECTED_ALL = [
 
 
 def test_all_imports() -> None:
-    assert set(__all__) == set(EXPECTED_ALL)
+    assert set(tools.__all__) == set(EXPECTED_ALL)

@@ -1,8 +1,8 @@
 import os
 
-from langchain.chat_models import BedrockChat
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.runnable import ConfigurableField
+from langchain_aws import ChatBedrock
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import ConfigurableField
 
 # For a description of each inference parameter, see
 # https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html
@@ -16,11 +16,11 @@ _model_kwargs = {
 # Full list of base model IDs is available at
 # https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html
 _model_alts = {
-    "claude_2_1": BedrockChat(
+    "claude_2_1": ChatBedrock(
         model_id="anthropic.claude-v2:1", model_kwargs=_model_kwargs
     ),
-    "claude_1": BedrockChat(model_id="anthropic.claude-v1", model_kwargs=_model_kwargs),
-    "claude_instant_1": BedrockChat(
+    "claude_1": ChatBedrock(model_id="anthropic.claude-v1", model_kwargs=_model_kwargs),
+    "claude_instant_1": ChatBedrock(
         model_id="anthropic.claude-instant-v1", model_kwargs=_model_kwargs
     ),
 }
@@ -34,7 +34,7 @@ _prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-_model = BedrockChat(
+_model = ChatBedrock(
     model_id="anthropic.claude-v2", model_kwargs=_model_kwargs
 ).configurable_alternatives(
     which=ConfigurableField(

@@ -1,7 +1,7 @@
 # flake8: noqa
 """Tools for making requests to an API endpoint."""
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from langchain_core.pydantic_v1 import BaseModel
 from langchain_core.callbacks import (
@@ -9,7 +9,7 @@ from langchain_core.callbacks import (
     CallbackManagerForToolRun,
 )
 
-from langchain_community.utilities.requests import TextRequestsWrapper
+from langchain_community.utilities.requests import GenericRequestsWrapper
 from langchain_core.tools import BaseTool
 
 
@@ -26,18 +26,38 @@ def _clean_url(url: str) -> str:
 class BaseRequestsTool(BaseModel):
     """Base class for requests tools."""
 
-    requests_wrapper: TextRequestsWrapper
+    requests_wrapper: GenericRequestsWrapper
+
+    allow_dangerous_requests: bool = False
+
+    def __init__(self, **kwargs: Any):
+        """Initialize the tool."""
+        if not kwargs.get("allow_dangerous_requests", False):
+            raise ValueError(
+                "You must set allow_dangerous_requests to True to use this tool. "
+                "Requests can be dangerous and can lead to security vulnerabilities. "
+                "For example, users can ask a server to make a request to an internal "
+                "server. It's recommended to use requests through a proxy server "
+                "and avoid accepting inputs from untrusted sources without proper "
+                "sandboxing."
+                "Please see: https://python.langchain.com/docs/security for "
+                "further security information."
+            )
+        super().__init__(**kwargs)
 
 
 class RequestsGetTool(BaseRequestsTool, BaseTool):
     """Tool for making a GET request to an API endpoint."""
 
     name: str = "requests_get"
-    description: str = "A portal to the internet. Use this when you need to get specific content from a website. Input should be a  url (i.e. https://www.google.com). The output will be the text response of the GET request."
+    description: str = """A portal to the internet. Use this when you need to get specific
+    content from a website. Input should be a  url (i.e. https://www.google.com).
+    The output will be the text response of the GET request.
+    """
 
     def _run(
         self, url: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool."""
         return self.requests_wrapper.get(_clean_url(url))
 
@@ -45,7 +65,7 @@ class RequestsGetTool(BaseRequestsTool, BaseTool):
         self,
         url: str,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool asynchronously."""
         return await self.requests_wrapper.aget(_clean_url(url))
 
@@ -64,7 +84,7 @@ class RequestsPostTool(BaseRequestsTool, BaseTool):
 
     def _run(
         self, text: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool."""
         try:
             data = _parse_input(text)
@@ -76,7 +96,7 @@ class RequestsPostTool(BaseRequestsTool, BaseTool):
         self,
         text: str,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool asynchronously."""
         try:
             data = _parse_input(text)
@@ -101,7 +121,7 @@ class RequestsPatchTool(BaseRequestsTool, BaseTool):
 
     def _run(
         self, text: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool."""
         try:
             data = _parse_input(text)
@@ -113,7 +133,7 @@ class RequestsPatchTool(BaseRequestsTool, BaseTool):
         self,
         text: str,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool asynchronously."""
         try:
             data = _parse_input(text)
@@ -138,7 +158,7 @@ class RequestsPutTool(BaseRequestsTool, BaseTool):
 
     def _run(
         self, text: str, run_manager: Optional[CallbackManagerForToolRun] = None
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool."""
         try:
             data = _parse_input(text)
@@ -150,7 +170,7 @@ class RequestsPutTool(BaseRequestsTool, BaseTool):
         self,
         text: str,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool asynchronously."""
         try:
             data = _parse_input(text)
@@ -165,13 +185,17 @@ class RequestsDeleteTool(BaseRequestsTool, BaseTool):
     """Tool for making a DELETE request to an API endpoint."""
 
     name: str = "requests_delete"
-    description: str = "A portal to the internet. Use this when you need to make a DELETE request to a URL. Input should be a specific url, and the output will be the text response of the DELETE request."
+    description: str = """A portal to the internet.
+    Use this when you need to make a DELETE request to a URL.
+    Input should be a specific url, and the output will be the text
+    response of the DELETE request.
+    """
 
     def _run(
         self,
         url: str,
         run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool."""
         return self.requests_wrapper.delete(_clean_url(url))
 
@@ -179,6 +203,6 @@ class RequestsDeleteTool(BaseRequestsTool, BaseTool):
         self,
         url: str,
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Run the tool asynchronously."""
         return await self.requests_wrapper.adelete(_clean_url(url))

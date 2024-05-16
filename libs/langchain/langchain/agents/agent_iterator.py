@@ -14,26 +14,27 @@ from typing import (
     Tuple,
     Union,
 )
+from uuid import UUID
 
 from langchain_core.agents import (
     AgentAction,
     AgentFinish,
     AgentStep,
 )
-from langchain_core.load.dump import dumpd
-from langchain_core.outputs import RunInfo
-from langchain_core.runnables.utils import AddableDict
-from langchain_core.utils.input import get_color_mapping
-
-from langchain.callbacks.manager import (
+from langchain_core.callbacks import (
     AsyncCallbackManager,
     AsyncCallbackManagerForChainRun,
     CallbackManager,
     CallbackManagerForChainRun,
     Callbacks,
 )
+from langchain_core.load.dump import dumpd
+from langchain_core.outputs import RunInfo
+from langchain_core.runnables.utils import AddableDict
+from langchain_core.tools import BaseTool
+from langchain_core.utils.input import get_color_mapping
+
 from langchain.schema import RUN_KEY
-from langchain.tools import BaseTool
 from langchain.utilities.asyncio import asyncio_timeout
 
 if TYPE_CHECKING:
@@ -54,6 +55,7 @@ class AgentExecutorIterator:
         tags: Optional[list[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         run_name: Optional[str] = None,
+        run_id: Optional[UUID] = None,
         include_run_info: bool = False,
         yield_actions: bool = False,
     ):
@@ -67,6 +69,7 @@ class AgentExecutorIterator:
         self.tags = tags
         self.metadata = metadata
         self.run_name = run_name
+        self.run_id = run_id
         self.include_run_info = include_run_info
         self.yield_actions = yield_actions
         self.reset()
@@ -76,6 +79,7 @@ class AgentExecutorIterator:
     tags: Optional[list[str]]
     metadata: Optional[Dict[str, Any]]
     run_name: Optional[str]
+    run_id: Optional[UUID]
     include_run_info: bool
     yield_actions: bool
 
@@ -162,6 +166,7 @@ class AgentExecutorIterator:
         run_manager = callback_manager.on_chain_start(
             dumpd(self.agent_executor),
             self.inputs,
+            self.run_id,
             name=self.run_name,
         )
         try:
@@ -227,6 +232,7 @@ class AgentExecutorIterator:
         run_manager = await callback_manager.on_chain_start(
             dumpd(self.agent_executor),
             self.inputs,
+            self.run_id,
             name=self.run_name,
         )
         try:

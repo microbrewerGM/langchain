@@ -1,14 +1,19 @@
+"""Utility code for runnables."""
+
 from __future__ import annotations
 
 import ast
 import asyncio
 import inspect
 import textwrap
+from functools import lru_cache
 from inspect import signature
 from itertools import groupby
 from typing import (
     Any,
     AsyncIterable,
+    AsyncIterator,
+    Awaitable,
     Callable,
     Coroutine,
     Dict,
@@ -20,9 +25,16 @@ from typing import (
     Protocol,
     Sequence,
     Set,
+    Type,
     TypeVar,
     Union,
 )
+
+from typing_extensions import TypeGuard
+
+from langchain_core.pydantic_v1 import BaseConfig, BaseModel
+from langchain_core.pydantic_v1 import create_model as _create_model_base
+from langchain_core.runnables.schema import StreamEvent
 
 Input = TypeVar("Input", contravariant=True)
 # Output type should implement __concat__, as eg str, list, dict do
@@ -43,7 +55,15 @@ async def gated_coro(semaphore: asyncio.Semaphore, coro: Coroutine) -> Any:
 
 
 async def gather_with_concurrency(n: Union[int, None], *coros: Coroutine) -> list:
-    """Gather coroutines with a limit on the number of concurrent coroutines."""
+    """Gather coroutines with a limit on the number of concurrent coroutines.
+
+    Args:
+        n: The number of coroutines to run concurrently.
+        coros: The coroutines to run.
+
+    Returns:
+        The results of the coroutines.
+    """
     if n is None:
         return await asyncio.gather(*coros)
 
@@ -64,6 +84,14 @@ def accepts_config(callable: Callable[..., Any]) -> bool:
     """Check if a callable accepts a config argument."""
     try:
         return signature(callable).parameters.get("config") is not None
+    except ValueError:
+        return False
+
+
+def accepts_context(callable: Callable[..., Any]) -> bool:
+    """Check if a callable accepts a context argument."""
+    try:
+        return signature(callable).parameters.get("context") is not None
     except ValueError:
         return False
 
@@ -195,7 +223,7 @@ def get_function_first_arg_dict_keys(func: Callable) -> Optional[List[str]]:
         visitor = IsFunctionArgDict()
         visitor.visit(tree)
         return list(visitor.keys) if visitor.keys else None
-    except (SyntaxError, TypeError, OSError):
+    except (SyntaxError, TypeError, OSError, SystemError):
         return None
 
 
@@ -218,7 +246,7 @@ def get_lambda_source(func: Callable) -> Optional[str]:
         visitor = GetLambdaSource()
         visitor.visit(tree)
         return visitor.source if visitor.count == 1 else name
-    except (SyntaxError, TypeError, OSError):
+    except (SyntaxError, TypeError, OSError, SystemError):
         return name
 
 
@@ -237,10 +265,17 @@ def get_function_nonlocals(func: Callable) -> List[Any]:
                 if "." in kk and kk.startswith(k):
                     vv = v
                     for part in kk.split(".")[1:]:
-                        vv = getattr(vv, part)
-                    values.append(vv)
+                        if vv is None:
+                            break
+                        else:
+                            try:
+                                vv = getattr(vv, part)
+                            except AttributeError:
+                                break
+                    else:
+                        values.append(vv)
         return values
-    except (SyntaxError, TypeError, OSError):
+    except (SyntaxError, TypeError, OSError, SystemError):
         return []
 
 
@@ -329,7 +364,7 @@ async def aadd(addables: AsyncIterable[Addable]) -> Optional[Addable]:
 
 
 class ConfigurableField(NamedTuple):
-    """A field that can be configured by the user."""
+    """Field that can be configured by the user."""
 
     id: str
 
@@ -343,7 +378,7 @@ class ConfigurableField(NamedTuple):
 
 
 class ConfigurableFieldSingleOption(NamedTuple):
-    """A field that can be configured by the user with a default value."""
+    """Field that can be configured by the user with a default value."""
 
     id: str
     options: Mapping[str, Any]
@@ -358,7 +393,7 @@ class ConfigurableFieldSingleOption(NamedTuple):
 
 
 class ConfigurableFieldMultiOption(NamedTuple):
-    """A field that can be configured by the user with multiple default values."""
+    """Field that can be configured by the user with multiple default values."""
 
     id: str
     options: Mapping[str, Any]
@@ -378,7 +413,7 @@ AnyConfigurableField = Union[
 
 
 class ConfigurableFieldSpec(NamedTuple):
-    """A field that can be configured by the user. It is a specification of a field."""
+    """Field that can be configured by the user. It is a specification of a field."""
 
     id: str
     annotation: Any
@@ -411,3 +446,117 @@ def get_unique_config_specs(
                 f"for {id}: {[first] + others}"
             )
     return unique
+
+
+class _RootEventFilter:
+    def __init__(
+        self,
+        *,
+        include_names: Optional[Sequence[str]] = None,
+        include_types: Optional[Sequence[str]] = None,
+        include_tags: Optional[Sequence[str]] = None,
+        exclude_names: Optional[Sequence[str]] = None,
+        exclude_types: Optional[Sequence[str]] = None,
+        exclude_tags: Optional[Sequence[str]] = None,
+    ) -> None:
+        """Utility to filter the root event in the astream_events implementation.
+
+        This is simply binding the arguments to the namespace to make save on
+        a bit of typing in the astream_events implementation.
+        """
+        self.include_names = include_names
+        self.include_types = include_types
+        self.include_tags = include_tags
+        self.exclude_names = exclude_names
+        self.exclude_types = exclude_types
+        self.exclude_tags = exclude_tags
+
+    def include_event(self, event: StreamEvent, root_type: str) -> bool:
+        """Determine whether to include an event."""
+        if (
+            self.include_names is None
+            and self.include_types is None
+            and self.include_tags is None
+        ):
+            include = True
+        else:
+            include = False
+
+        event_tags = event.get("tags") or []
+
+        if self.include_names is not None:
+            include = include or event["name"] in self.include_names
+        if self.include_types is not None:
+            include = include or root_type in self.include_types
+        if self.include_tags is not None:
+            include = include or any(tag in self.include_tags for tag in event_tags)
+
+        if self.exclude_names is not None:
+            include = include and event["name"] not in self.exclude_names
+        if self.exclude_types is not None:
+            include = include and root_type not in self.exclude_types
+        if self.exclude_tags is not None:
+            include = include and all(
+                tag not in self.exclude_tags for tag in event_tags
+            )
+
+        return include
+
+
+class _SchemaConfig(BaseConfig):
+    arbitrary_types_allowed = True
+    frozen = True
+
+
+def create_model(
+    __model_name: str,
+    **field_definitions: Any,
+) -> Type[BaseModel]:
+    """Create a pydantic model with the given field definitions.
+
+    Args:
+        __model_name: The name of the model.
+        **field_definitions: The field definitions for the model.
+
+    Returns:
+        Type[BaseModel]: The created model.
+    """
+    try:
+        return _create_model_cached(__model_name, **field_definitions)
+    except TypeError:
+        # something in field definitions is not hashable
+        return _create_model_base(
+            __model_name, __config__=_SchemaConfig, **field_definitions
+        )
+
+
+@lru_cache(maxsize=256)
+def _create_model_cached(
+    __model_name: str,
+    **field_definitions: Any,
+) -> Type[BaseModel]:
+    return _create_model_base(
+        __model_name, __config__=_SchemaConfig, **field_definitions
+    )
+
+
+def is_async_generator(
+    func: Any,
+) -> TypeGuard[Callable[..., AsyncIterator]]:
+    """Check if a function is an async generator."""
+    return (
+        inspect.isasyncgenfunction(func)
+        or hasattr(func, "__call__")
+        and inspect.isasyncgenfunction(func.__call__)
+    )
+
+
+def is_async_callable(
+    func: Any,
+) -> TypeGuard[Callable[..., Awaitable]]:
+    """Check if a function is async."""
+    return (
+        asyncio.iscoroutinefunction(func)
+        or hasattr(func, "__call__")
+        and asyncio.iscoroutinefunction(func.__call__)
+    )

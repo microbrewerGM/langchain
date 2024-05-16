@@ -1,4 +1,4 @@
-from langchain.storage import __all__
+from langchain import storage
 
 EXPECTED_ALL = [
     "EncoderBackedStore",
@@ -6,6 +6,7 @@ EXPECTED_ALL = [
     "InMemoryByteStore",
     "LocalFileStore",
     "RedisStore",
+    "InvalidKeyException",
     "create_lc_store",
     "create_kv_docstore",
     "UpstashRedisByteStore",
@@ -14,4 +15,4 @@ EXPECTED_ALL = [
 
 
 def test_all_imports() -> None:
-    assert set(__all__) == set(EXPECTED_ALL)
+    assert set(storage.__all__) == set(EXPECTED_ALL)

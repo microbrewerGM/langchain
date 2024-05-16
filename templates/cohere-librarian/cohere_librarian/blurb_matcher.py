@@ -1,9 +1,9 @@
 import csv
 
 from langchain.chains.question_answering import load_qa_chain
-from langchain.embeddings import CohereEmbeddings
-from langchain.prompts import PromptTemplate
-from langchain.vectorstores import Chroma
+from langchain_community.embeddings import CohereEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_core.prompts import PromptTemplate
 
 from .chat import chat
 
@@ -44,6 +44,6 @@ PROMPT = PromptTemplate(
 )
 
 book_rec_chain = {
-    "input_documents": lambda x: docsearch.get_relevant_documents(x["message"]),
+    "input_documents": lambda x: docsearch.invoke(x["message"]),
     "message": lambda x: x["message"],
 } | load_qa_chain(chat, chain_type="stuff", prompt=PROMPT)

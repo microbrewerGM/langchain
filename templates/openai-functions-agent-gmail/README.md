@@ -4,7 +4,7 @@ Ever struggled to reach inbox zero?
 
 Using this template, you can create and customize your very own AI assistant to manage your Gmail account. Using the default Gmail tools, it can read, search through, and draft emails to respond on your behalf. It also has access to a Tavily search engine so it can search for relevant information about any topics or people in the email thread before writing, ensuring the drafts include all the relevant information needed to sound well-informed.
 
-![Gmail Agent Playground](./static/gmail-agent-playground.gif)
+![Animated GIF showing the interface of the Gmail Agent Playground with a cursor interacting with the input field.](./static/gmail-agent-playground.gif "Gmail Agent Playground Interface")
 
 ## The details
 
@@ -56,7 +56,7 @@ add_routes(app, openai_functions_agent_chain, path="/openai-functions-agent-gmai
 
 (Optional) Let's now configure LangSmith. 
 LangSmith will help us trace, monitor and debug LangChain applications. 
-LangSmith is currently in private beta, you can sign up [here](https://smith.langchain.com/). 
+You can sign up for LangSmith [here](https://smith.langchain.com/). 
 If you don't have access, you can skip this section
 
 ```shell
@@ -88,7 +88,7 @@ runnable = RemoteRunnable("http://localhost:8000/openai-functions-agent-gmail")
 ## Customize Auth
 
 ```
-from langchain.tools.gmail.utils import build_resource_service, get_gmail_credentials
+from langchain_community.tools.gmail.utils import build_resource_service, get_gmail_credentials
 
 # Can review scopes here https://developers.google.com/gmail/api/auth/scopes
 # For instance, readonly scope is 'https://www.googleapis.com/auth/gmail.readonly'
