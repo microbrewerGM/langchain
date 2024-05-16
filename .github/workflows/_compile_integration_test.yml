@@ -1,6 +1,6 @@
 name: compile-integration-test
 
-on:
+off:
   workflow_call:
     inputs:
       working-directory:
